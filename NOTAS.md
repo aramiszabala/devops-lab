@@ -104,3 +104,11 @@ ssh -T git@github.com
 ssh: se conecta a otra máquina.
 -T: no pide una terminal interactiva. GitHub igual no te la da; solo queremos probar que te reconoce.
 git@github.com: el formato es usuario@servidor. En GitHub todos se conectan con el usuario git, y GitHub sabe quién sos por tu clave, no por el usuario.
+
+## Conflictos
+
+Cuando dos ramas canbian de forma distinta una misma linea, Git no puede decidir cual de los dos cambios dejar.
+Para solucionarlo, una vez que hacemos "git status" y vemos el error, debemos abrir VS Code para elegir con cual de los cambios nos quedamos. Guardamos y luego hacemos:
+ git add nombre-del-archivo
+ git commit --no-edit
+
