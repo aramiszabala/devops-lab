@@ -30,7 +30,8 @@ wsl -d NombreDeLaDistro
 exit
 
 Cierra la sesión de la terminal actual. Si estabas dentro de Linux desde PowerShell, volvés a PowerShell.
-En Ubuntu: navegación y sistema
+
+## En Ubuntu: navegación y sistema
 
 cd ~
 
@@ -55,7 +56,8 @@ apt --help y man apt
 
 --help: muestra un resumen de las opciones del comando. Casi todos los comandos lo tienen.
 man (manual): abre el manual completo del comando. Te movés con las flechas y salís con q.
-En Ubuntu: Git y VS Code
+
+## En Ubuntu: Git y VS Code
 
 git --version
 
@@ -76,7 +78,8 @@ Las comillas hacen falta porque el valor tiene espacios. Sin ellas, Git entender
 git config --global --list
 
 --list: muestra toda la configuración guardada.
-En Ubuntu: SSH
+
+## En Ubuntu: SSH
 
 ssh-keygen -t ed25519 -C "tu-email@ejemplo.com"
 
