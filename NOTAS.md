@@ -1,114 +1,82 @@
-#Notas de aprendizaje DevOps
+## Linux básico
 
-## WSL
-En PowerShell (Windows)
+- `cd ~`: ir a mi carpeta personal.
+- `cd <carpeta>`: entrar a una carpeta.
+- `ls`: listar archivos. Con `-a` incluye los ocultos.
+- `mkdir <carpeta>`: crear una carpeta.
+- `touch <archivo>`: crear un archivo vacío.
+- `cat <archivo>`: mostrar el contenido de un archivo.
+- `echo "texto" > archivo`: escribir en un archivo (reemplaza todo el contenido).
+- `echo "texto" >> archivo`: agregar al final del archivo.
+- `code .` / `code <archivo>`: abrir VS Code en la carpeta actual / en ese archivo.
+- `python3 app.py`: ejecutar un script de Python. Se corta con `Ctrl+C`.
+- `curl localhost:8000/health`: hacer un pedido HTTP desde la terminal. Con `-i` muestra los encabezados.
+- `q`: salir del paginador (cuando abajo aparece `:` o `(END)`).
 
-wsl --install
+## Git: configuración (una sola vez)
 
-wsl: el programa de Windows que maneja los Linux instalados.
---install: instala WSL y, por defecto, Ubuntu.
+- `git config --global user.name "Nombre"`: nombre que queda en cada commit.
+- `git config --global user.email "email"`: email que queda en cada commit (el mismo de GitHub).
+- `git config --global init.defaultBranch main`: la primera rama de cada repo nuevo se llama `main`.
+- `git config --global --list`: ver la configuración guardada.
 
-wsl ~
+## Git: crear un repo
 
-Abre la distribución predeterminada.
-~: arranca en tu carpeta personal de Linux, no en la carpeta donde estaba parado Windows.
+- `git init`: convierte la carpeta actual en un repo (crea la carpeta oculta `.git`).
 
-wsl -l -v
+## Git: ciclo básico
 
--l (list): lista las distribuciones instaladas.
--v (verbose, detallado): agrega el estado (corriendo o detenida) y la versión de WSL de cada una.
+Carpeta de trabajo --`git add`--> Staging --`git commit`--> Repositorio
 
-wsl --set-default Ubuntu
+- `git status`: estado de cada archivo (untracked, modified, staged).
+- `git diff`: cambios que todavía no pasé a staging.
+- `git add <archivo>` / `git add .`: pasar cambios a staging (uno / todos).
+- `git commit -m "mensaje"`: guardar lo que está en staging como un commit.
+- `git commit --amend --reset-author --no-edit`: corregir el autor del último commit. Solo si todavía no lo pusheé.
 
---set-default: define qué distribución abre wsl cuando no le decís cuál.
-Ubuntu: el nombre de esa distribución, tal como aparece en wsl -l -v.
+## Git: historial
 
-wsl -d NombreDeLaDistro
+- `git log`: historial completo, con autor y fecha.
+- `git log --oneline`: un commit por línea (hash corto + mensaje).
+- `git log --oneline --graph`: igual, con el dibujo de las ramas.
+- `HEAD`: dónde estoy parado ahora.
 
--d (distribution): abre una distribución específica sin cambiar la predeterminada.
+## Git: remotos (GitHub)
 
-exit
+- `git remote add origin <url>`: conectar el repo local con GitHub. `origin` es el nombre del remoto.
+- `git remote -v`: ver los remotos configurados.
+- `git push -u origin <rama>`: primer push de una rama. `-u` la vincula con la de GitHub.
+- `git push`: los pushes siguientes.
+- `git pull`: bajar cambios de GitHub y unirlos a mi rama.
+- `git fetch --prune`: consultar GitHub sin tocar mis archivos y borrar referencias a ramas que ya no existen allá.
+- "ahead of 'origin/main' by N commits": tengo N commits locales que no están en GitHub.
 
-Cierra la sesión de la terminal actual. Si estabas dentro de Linux desde PowerShell, volvés a PowerShell.
+## Git: ramas
 
-## En Ubuntu: navegación y sistema
+- `git branch`: listar ramas locales (`*` = la actual).
+- `git branch -a`: listar ramas locales y remotas.
+- `git switch <rama>`: cambiar de rama.
+- `git switch -c <rama>`: crear una rama desde donde estoy parado y cambiarme a ella.
+- `git branch -d <rama>`: borrar una rama ya mergeada. `-D` la borra a la fuerza.
 
-cd ~
+## Git: merge y conflictos
 
-cd (change directory): te mueve a otra carpeta.
-~: atajo de tu carpeta personal (/home/aramiszabala).
+- `git merge <rama>`: unir esa rama a la rama actual.
+- Fast-forward: si la rama actual no cambió, Git solo la mueve hacia adelante, sin commit de merge.
+- Conflicto: dos ramas cambiaron la misma línea. Git marca el archivo así:
+  - `<<<<<<< HEAD`: arriba, lo que tiene mi rama actual.
+  - `=======`: separador.
+  - `>>>>>>> rama`: arriba, lo que trae la otra rama.
+- Para resolverlo: editar, borrar los marcadores, `git add <archivo>` y `git commit --no-edit`.
+- `git merge --abort`: cancelar el merge y volver a como estaba antes.
 
-ls ~/.ssh
+## Flujo de trabajo con main protegida
 
-ls (list): muestra los archivos de una carpeta.
-~/.ssh: la carpeta .ssh dentro de tu carpeta personal. El punto adelante indica que es una carpeta oculta: un ls común no la muestra, y para verla hay que usar ls -a.
+1. `git switch main` y `git pull`: arrancar desde main actualizada.
+2. `git switch -c tipo/descripcion`: crear la rama de trabajo.
+3. Hacer cambios, `git add` y `git commit -m`.
+4. `git push -u origin tipo/descripcion`.
+5. En GitHub: crear PR → Merge → Delete branch.
+6. `git switch main`, `git pull`, `git branch -d tipo/descripcion` y `git fetch --prune`.
 
-cat ~/.ssh/id_ed25519.pub
-
-cat: muestra en pantalla el contenido de un archivo.
-
-sudo apt update, sudo apt upgrade -y, sudo apt install git -y
-
-sudo (superuser do): ejecuta el comando como administrador (root). Hace falta para instalar programas o tocar archivos del sistema.
-apt, update, upgrade, install y -y: ya los vimos.
-
-apt --help y man apt
-
---help: muestra un resumen de las opciones del comando. Casi todos los comandos lo tienen.
-man (manual): abre el manual completo del comando. Te movés con las flechas y salís con q.
-
-## En Ubuntu: Git y VS Code
-
-git --version
-
---version: muestra qué versión está instalada. Sirve para verificar que un programa existe.
-
-code .
-
-code: abre VS Code.
-.: la carpeta actual. Abre VS Code con esa carpeta cargada.
-
-git config --global user.name "Tu Nombre" (y lo mismo con user.email)
-
-git config: lee o cambia la configuración de Git.
---global: la configuración se aplica a todos tus repos, no solo al actual. Se guarda en ~/.gitconfig.
-user.name / user.email: el nombre y email que quedan registrados en cada commit.
-Las comillas hacen falta porque el valor tiene espacios. Sin ellas, Git entendería "Tu" y "Nombre" como dos cosas separadas.
-
-git config --global --list
-
---list: muestra toda la configuración guardada.
-
-## En Ubuntu: SSH
-
-ssh-keygen -t ed25519 -C "tu-email@ejemplo.com"
-
-ssh-keygen (key generator): genera un par de claves.
--t (type): el algoritmo de la clave. ed25519 es el más moderno; el viejo es rsa.
--C (comment): un texto que queda al final de la clave pública para identificarla.
-
-eval "$(ssh-agent -s)" es el más raro de todos, va por partes:
-
-ssh-agent: arranca el programa que guarda tus claves desbloqueadas en memoria.
--s: le pide que, al arrancar, imprima unos comandos que definen variables de entorno. Son datos que la terminal guarda, en este caso dónde encontrar al agente.
-$( ... ): ejecuta lo que está adentro y devuelve el texto que imprimió.
-eval: toma ese texto y lo ejecuta como si fueran comandos.
-En resumen: arranca el agente y le avisa a tu terminal dónde está, para que ssh-add y git lo encuentren.
-
-ssh-add ~/.ssh/id_ed25519
-
-ssh-add: le entrega una clave privada al agente. Te pide la passphrase una vez y, mientras la terminal siga abierta, no la vuelve a pedir.
-
-ssh -T git@github.com
-
-ssh: se conecta a otra máquina.
--T: no pide una terminal interactiva. GitHub igual no te la da; solo queremos probar que te reconoce.
-git@github.com: el formato es usuario@servidor. En GitHub todos se conectan con el usuario git, y GitHub sabe quién sos por tu clave, no por el usuario.
-
-## Conflictos
-
-Cuando dos ramas canbian de forma distinta una misma linea, Git no puede decidir cual de los dos cambios dejar.
-Para solucionarlo, una vez que hacemos "git status" y vemos el error, debemos abrir VS Code para elegir con cual de los cambios nos quedamos. Guardamos y luego hacemos:
- git add nombre-del-archivo
- git commit --no-edit
-
+Prefijos de ramas: `feature/` (funcionalidad), `fix/` (corrección), `docs/` (documentación), `chore/` (mantenimiento).
