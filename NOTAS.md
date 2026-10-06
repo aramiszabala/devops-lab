@@ -80,3 +80,39 @@ Carpeta de trabajo --`git add`--> Staging --`git commit`--> Repositorio
 6. `git switch main`, `git pull`, `git branch -d tipo/descripcion` y `git fetch --prune`.
 
 Prefijos de ramas: `feature/` (funcionalidad), `fix/` (corrección), `docs/` (documentación), `chore/` (mantenimiento).
+
+
+## Stash
+
+Cajón temporal para guardar cambios sin commitear y dejar la carpeta limpia.
+Sirve para cambiar de rama sin commitear trabajo a medias.
+
+### Guardar
+
+- `git stash push -m "mensaje"`: guarda los cambios (en staging o no) de archivos que Git ya sigue.
+- `git stash push -u -m "mensaje"`: incluye también archivos nuevos (untracked).
+
+### Ver
+
+- `git stash list`: lista lo guardado. `stash@{0}` es el más reciente.
+- `git stash show -p`: muestra las líneas del último stash sin aplicarlo.
+- `git stash show -p stash@{1}`: lo mismo con un stash específico.
+
+### Recuperar
+
+- `git stash pop`: aplica el último stash y lo saca del cajón.
+- `git stash apply`: aplica el último stash y deja una copia en el cajón.
+- `git stash pop stash@{1}`: aplica un stash específico (también funciona con `apply`).
+
+### Descartar
+
+- `git stash drop`: tira el último stash sin aplicarlo.
+- `git stash drop stash@{1}`: tira uno específico.
+- `git stash clear`: tira **todos**. No se recupera fácil.
+
+### A tener en cuenta
+
+- Los cambios sin commitear no pertenecen a ninguna rama: te siguen si cambiás de rama.
+- Sin `-u`, los archivos nuevos no se guardan en el stash y quedan en la carpeta.
+- Si al hacer `pop` hay conflicto, se resuelve como en un merge y el stash **no** se borra del cajón: después de resolverlo, hacé `git stash drop`.
+
