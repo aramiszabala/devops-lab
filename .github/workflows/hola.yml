@@ -1,0 +1,15 @@
+name: Hola Actions
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  saludo:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Hola desde GitHub Actions"
+      - run: uname -a
+      - run: ls -la
+      - uses: actions/checkout@v7
+      - run: ls -la
