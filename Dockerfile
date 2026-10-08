@@ -1,4 +1,5 @@
-FROM python:3.12
+FROM python:3.12-slim
+LABEL org.opencontainers.image.source=https://github.com/aramiszabala/devops-lab
 
 RUN useradd --create-home --uid 1000 appuser
 
