@@ -1,6 +1,7 @@
 import os
-import psycopg
 from http.server import BaseHTTPRequestHandler, HTTPServer
+
+import psycopg
 
 DATABASE_URL = os.environ["DATABASE_URL"]
 
