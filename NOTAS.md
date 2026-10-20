@@ -234,3 +234,5 @@ docker run --rm \
 - `error from registry: denied`: la imagen no existe con ese nombre, o es privada y no tengo sesión.
 - `password authentication failed` en Postgres: contraseña distinta a la que tiene el volumen (o `.env` sin guardar).
 - VS Code `No file system provider`: se cortó la conexión con WSL (por ejemplo, después de `wsl --shutdown`) → Reload Window o `code .` de nuevo.
+
+Esto es una prueba para Jenkins
