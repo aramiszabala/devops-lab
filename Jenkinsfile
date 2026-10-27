@@ -24,6 +24,26 @@ pipeline {
             }
         }
 
+        stage('Smoke test') {
+            environment {
+                DB_PASSWORD = credentials('db-password')
+                COMPOSE = 'docker compose -p jenkins-ci -f compose.yaml -f compose.ci.yaml'
+            }
+            steps {
+                sh '$COMPOSE up -d --build --wait'
+                sh 'docker run --rm --network jenkins-ci_default curlimages/curl -f --retry 5 --retry-connrefused --retry-delay 2 http://app:8000/health'
+                sh 'docker run --rm --network jenkins-ci_default curlimages/curl -f http://app:8000/visitas'
+            }
+            post {
+                failure {
+                    sh '$COMPOSE logs'
+                }
+                always {
+                    sh '$COMPOSE down -v'
+                }
+            }
+        }
+
         stage('Security scan') {
             steps {
                 sh '''
