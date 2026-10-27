@@ -14,7 +14,7 @@ def registrar_visita():
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/health":
-            self.responder(200, "ok - devops-lab")
+            self.responder(500, "ok - devops-lab")
         elif self.path == "/visitas":
             total = registrar_visita()
             self.responder(200, f"Visitas registradas: {total}")
