@@ -235,4 +235,219 @@ docker run --rm \
 - `password authentication failed` en Postgres: contraseña distinta a la que tiene el volumen (o `.env` sin guardar).
 - VS Code `No file system provider`: se cortó la conexión con WSL (por ejemplo, después de `wsl --shutdown`) → Reload Window o `code .` de nuevo.
 
-Esto es una prueba para Jenkins
+## GitHub Actions: conceptos
+
+- **Workflow:** proceso automatizado. Archivo YAML en `.github/workflows/`.
+- **Evento (`on`):** qué lo dispara (push, PR, tag, botón manual).
+- **Job:** grupo de pasos que corre en una máquina. Por defecto, los jobs corren **en paralelo**.
+- **Step:** un paso. Puede ser un comando (`run`) o una action reutilizable (`uses`).
+- **Runner:** máquina virtual limpia que GitHub crea para cada job y destruye al terminar.
+
+## GitHub Actions: estructura de un workflow
+
+```yaml
+name: CI
+on:
+  pull_request:
+    branches: [main]      # en cada PR hacia main
+  push:
+    branches: [main]      # cuando algo entra a main
+    tags: ["v*.*.*"]      # cuando se pushea un tag de versión
+  workflow_dispatch:      # botón para correrlo a mano
+
+jobs:
+  mi-job:
+    runs-on: ubuntu-latest
+    needs: otro-job       # espera a que otro job termine bien
+    permissions:          # permisos mínimos del GITHUB_TOKEN
+      contents: read
+      packages: write
+    env:
+      VAR: ${{ secrets.MI_SECRETO }}
+    steps:
+      - uses: actions/checkout@v7     # bajar el código (el runner arranca vacío)
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Paso con nombre
+        run: echo "hola"
+      - run: |                        # comando de varias líneas
+          linea 1
+          linea 2
+      - if: failure()                 # solo si algo falló
+        run: docker compose logs
+      - if: always()                  # siempre
+        run: docker compose down -v
+```
+
+- `${{ ... }}`: expresión que GitHub reemplaza antes de ejecutar.
+- `secrets.GITHUB_TOKEN`: token automático, vence al terminar el job. No hace falta crearlo.
+- `github.actor`: el usuario que disparó el workflow.
+- `echo "VAR=valor" >> "$GITHUB_ENV"`: deja una variable disponible para los pasos siguientes.
+- `${VARIABLE#texto}` (bash): saca `texto` del principio del valor (ej.: `v1.1.0` → `1.1.0`).
+
+Variables útiles: `GITHUB_RUN_NUMBER`, `GITHUB_WORKSPACE`, `GITHUB_WORKFLOW`, `GITHUB_SHA`, `GITHUB_REF_NAME`.
+
+## GitHub: secrets y reglas
+
+- Secrets: **Settings → Secrets and variables → Actions**. No se pueden volver a ver y en los logs aparecen como `***`.
+- Checks obligatorios: **Settings → Rules → Rulesets → Require status checks to pass**.
+  - El check tiene que haber corrido al menos una vez para aparecer en el buscador.
+  - El nombre del check es el nombre del **job**.
+- Un check que no es *Required* no bloquea el merge, aunque esté en rojo o en pending.
+
+## Códigos de salida
+
+- Todo comando devuelve un código al terminar: `0` = bien, cualquier otro = error.
+- `echo $?`: muestra el código del último comando.
+- Los pipelines marcan un paso como fallido si termina con código distinto de `0`.
+- `curl -f`: devuelve error si la respuesta HTTP es un código de error (4xx, 5xx). **Imprescindible en tests.**
+- `curl --retry 5 --retry-connrefused --retry-delay 2`: reintentar si la app todavía no arrancó.
+- `comando || true`: si el comando falla, no cuenta como error.
+
+## Ruff (linter de Python)
+
+- `ruff check .`: revisar el código sin ejecutarlo.
+- `docker run --rm -v .:/io ghcr.io/astral-sh/ruff check`: correrlo con Docker, sin instalar nada.
+- `--fix`: aplicar las correcciones automáticas (las marcadas con `[*]`).
+- `F401`: import que no se usa. `I001`: imports desordenados.
+- Orden de imports: librería estándar → externas (pip) → propias, separados por línea en blanco.
+
+## Tags y versiones
+
+- `git tag -a v1.2.0 -m "mensaje"`: crear un tag anotado en el commit actual.
+- `git tag`: listar tags. `git show v1.2.0`: ver un tag.
+- `git push origin v1.2.0`: subir el tag (`git push` común **no** sube tags).
+- `git tag -d v1.2.0`: borrar un tag local (solo si todavía no se pusheó).
+- Un tag publicado **no se reutiliza**: si tiene un error, se publica la versión siguiente.
+- Antes de taggear: `git switch main` y `git pull`, para que el tag incluya lo mergeado.
+- Versionado semántico: MAYOR (rompe) . MENOR (agrega) . PARCHE (corrige o ajusta).
+- GitHub → **Releases → Draft a new release → Generate release notes**: documenta la versión.
+- `git commit --allow-empty -m "..."`: commit sin cambios, para volver a disparar los pipelines.
+
+## Jenkins: conceptos
+
+- **Controller:** servidor principal (interfaz web, configuración, coordina).
+- **Agent:** máquina que ejecuta los builds. Buena práctica: los builds en agents, no en el controller.
+- **Executor:** "lugar" para correr un build. Cantidad de builds simultáneos.
+- **Job:** tarea configurada.
+  - **Freestyle:** se configura con formularios. La configuración no queda en el repo.
+  - **Pipeline:** definido en un `Jenkinsfile` en el repo.
+  - **Multibranch Pipeline:** detecta solo las ramas y PRs con `Jenkinsfile`.
+- **Build:** cada ejecución (#1, #2...). **Workspace:** carpeta del job. A diferencia de Actions, **queda entre builds**.
+- **Credentials:** donde se guardan secretos y tokens.
+
+## Jenkins en Docker
+
+```bash
+docker build -t jenkins-docker:1.0 jenkins/
+docker run -d --name jenkins \
+  -p 8090:8080 -p 50000:50000 \
+  -v jenkins_home:/var/jenkins_home \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  --group-add $(getent group docker | cut -d: -f3) \
+  --restart unless-stopped \
+  jenkins-docker:1.0
+```
+
+- `jenkins_home`: volumen con toda la configuración. Si se pierde, se pierde Jenkins.
+- `jenkins/Dockerfile`: imagen oficial + cliente de Docker y Compose.
+- Contraseña inicial: `docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword`.
+- Verificar que ve Docker: `docker exec jenkins docker ps`.
+- `--restart unless-stopped`: arranca solo, salvo que lo pare yo.
+- `--group-add`: suma al usuario de Jenkins al grupo `docker` de mi máquina.
+- `getent group docker | cut -d: -f3`: número del grupo `docker`.
+- Con el socket montado, Jenkins tiene control total de mi Docker: solo para laboratorio.
+- Idioma: plugin **Locale** → Manage Jenkins → System → Default Language `en`.
+
+## Jenkinsfile (declarativo)
+
+```groovy
+pipeline {
+    agent any
+    environment {
+        IMAGE = "app:jenkins-${env.BUILD_NUMBER}"
+    }
+    stages {
+        stage('Etapa') {
+            environment {
+                SECRETO = credentials('id-de-la-credencial')
+            }
+            steps {
+                sh 'comando "$IMAGE"'
+                sh '''
+                    comando largo \
+                      en varias líneas
+                '''
+            }
+            post {
+                failure { sh 'docker compose logs' }
+                always  { sh 'docker compose down -v' }
+            }
+        }
+    }
+    post {
+        always { sh 'docker rmi "$IMAGE" || true' }
+    }
+}
+```
+
+- Las etapas son **secuenciales**: si una falla, las siguientes se saltean (`parallel { }` para correrlas juntas).
+- `sh '...'` con **comillas simples**: las variables las resuelve la shell, no Groovy (más seguro con secretos).
+- `credentials('id')`: trae una credencial. En los logs aparece como `****`.
+- `post`: `always`, `failure` y `success`. Puede ir en el pipeline o en una etapa.
+- Variables útiles: `BUILD_NUMBER`, `WORKSPACE`, `JOB_NAME`, `GIT_COMMIT`, `GIT_BRANCH`.
+
+## Docker desde Jenkins (trampas)
+
+- `-v "$WORKSPACE":/ruta` **no funciona**: la ruta la interpreta el Docker de mi máquina, no Jenkins.
+  → Usar `--volumes-from jenkins -w "$WORKSPACE"`.
+- `--user "$(id -u):$(id -g)"`: correr la herramienta con el usuario de Jenkins (si no, deja archivos de root).
+- `curl localhost` desde Jenkins apunta al propio Jenkins.
+  → Usar `docker run --rm --network <proyecto>_default curlimages/curl -f http://app:8000/...`.
+- Compose para CI:
+  - `-p jenkins-ci`: nombre de proyecto propio, separado del stack local.
+  - `-f compose.yaml -f compose.ci.yaml`: combinar archivos (el segundo pisa al primero).
+  - `ports: !reset []`: vaciar los puertos heredados.
+  - `profiles: ["herramientas"]`: el servicio solo arranca si se pide su profile.
+
+## Jenkins: Multibranch y GitHub
+
+- Credencial `github-token` (*Username with password*): token clásico con `repo:status` y `public_repo`.
+- Branch Sources → GitHub → Behaviors:
+  - Discover branches: *Exclude branches that are also filed as PRs*.
+  - Discover PRs from origin: *Merging the pull request with the current target branch revision*.
+- Scan Repository Triggers: *Periodically*, cada 1 minuto (GitHub no puede avisarle a un Jenkins en localhost).
+- Checks en GitHub:
+  - `continuous-integration/jenkins/pr-merge`: PRs (este va como obligatorio).
+  - `continuous-integration/jenkins/branch`: ramas, como `main`.
+- Executors del controller en 1 (Manage Jenkins → Nodes → Built-In Node), para que los builds no se pisen.
+
+## Cron (Poll SCM)
+
+- 5 campos: minuto, hora, día del mes, mes, día de la semana. `*` = cualquiera.
+- `H/2 * * * *`: cada 2 minutos. `H` reparte los horarios entre jobs.
+
+## GitHub Actions vs Jenkins
+
+| | Actions | Jenkins |
+|---|---|---|
+| Infraestructura | La pone GitHub | La administro yo |
+| Ejecución | Runner limpio cada vez | Workspace que queda |
+| Jobs / etapas | En paralelo por defecto | Secuenciales por defecto |
+| Secretos | Secrets del repo | Credentials |
+| Integración con GitHub | Nativa | Plugin + token + polling o webhook |
+| Conviene cuando | El código está en GitHub y no quiero mantener servidores | Varias plataformas, redes internas, mucha personalización |
+
+## Errores que me aparecieron
+
+- **El workflow no corre / no aparecen los checks:** el archivo estaba vacío (`ls -la` mostraba 0 bytes) o nunca se le hizo `git add`.
+- **Los checks no aparecen en el ruleset:** tienen que haber corrido al menos una vez. Hay que escribir el nombre del job en el buscador.
+- **`smoke-test` en *skipped*:** su `needs` (el lint) falló.
+- **Merge habilitado con checks en rojo:** ese check no estaba como *Required*.
+- **`I001` / `F401` en Ruff:** imports desordenados / import que no se usa.
+- **Checks de Jenkins en pending para siempre:** el build se canceló al cambiar la configuración → commit vacío para que el PR tome los checks nuevos.
+- **`denied` / `403` al publicar en GHCR desde Actions:** el repo no tiene permiso sobre el paquete → paquete → Manage Actions access → Write.
+- **`HCS_E_HYPERV_NOT_INSTALLED` al instalar WSL:** virtualización apagada en el BIOS (*SVM Mode* en AMD, *VT-x* en Intel) + `wsl.exe --install --no-distribution`.
+- **Ruff en Jenkins ve una carpeta vacía:** usé `-v "$WORKSPACE"` → hay que usar `--volumes-from jenkins`.
+- **Mergeé sin que Jenkins revise:** Jenkins no informaba a GitHub → Multibranch + check obligatorio.
