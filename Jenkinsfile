@@ -6,6 +6,12 @@ pipeline {
     }
 
     stages {
+        stage('Info') {
+            steps {
+                sh 'env | sort'
+            }
+        }
+        
         stage('Lint') {
             steps {
                 sh 'docker run --rm --volumes-from jenkins -w "$WORKSPACE" --user "$(id -u):$(id -g)" ghcr.io/astral-sh/ruff check'
